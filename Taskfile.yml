@@ -2,24 +2,44 @@ version: "3"
 
 vars:
   HOST: localhost
-  PORT: 3300
+  FRONTEND_PORT: 5173
+  BACKEND_PORT: 3300
 
 tasks:
-  default:
-    desc: "Lance le serveur et ouvre le navigateur"
-    cmds:
-      - task: run
 
-  run:
-    desc: "Lance elite-deck et ouvre http://{{.HOST}}:{{.PORT}}"
+  dev:
+    desc: "Full stack dev"
     cmds:
-      - cmd: cmd /c start "" "http://{{.HOST}}:{{.PORT}}"
+      - task: backend
+      - task: frontend
+      - task: open-browser
+
+  backend:
+    desc: "Lance backend Python"
+    cmds:
+      - cmd: cmd /c start "" cmd /k uv run python -m back --host 0.0.0.0 --port {{.BACKEND_PORT}}
         platforms: [windows]
-      - cmd: open "http://{{.HOST}}:{{.PORT}}"
+      - cmd: uv run python -m back --host 0.0.0.0 --port {{.BACKEND_PORT}}
+        platforms: [linux, darwin]
+
+  frontend:
+    desc: "Lance Vite"
+    dir: src/front
+    cmds:
+      - cmd: cmd /c start "" cmd /k npm run dev
+        platforms: [windows]
+      - cmd: npm run dev
+        platforms: [linux, darwin]
+
+  open-browser:
+    desc: "Ouvre le navigateur"
+    cmds:
+      - cmd: start "" "http://{{.HOST}}:{{.FRONTEND_PORT}}"
+        platforms: [windows]
+      - cmd: open "http://{{.HOST}}:{{.FRONTEND_PORT}}"
         platforms: [darwin]
-      - cmd: xdg-open "http://{{.HOST}}:{{.PORT}}"
+      - cmd: xdg-open "http://{{.HOST}}:{{.FRONTEND_PORT}}"
         platforms: [linux]
-      - uv run python -m back {{.CLI_ARGS}}
 
   run:dev:
     desc: "Lance en mode verbose"
