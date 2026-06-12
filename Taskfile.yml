@@ -26,7 +26,7 @@ tasks:
     desc: "Lance Vite"
     dir: src/front
     cmds:
-      - cmd: cmd /c start "" cmd /k npm run dev
+      - cmd: cmd /c start "" cmd /k npm run dev -- --host
         platforms: [windows]
       - cmd: npm run dev
         platforms: [linux, darwin]
