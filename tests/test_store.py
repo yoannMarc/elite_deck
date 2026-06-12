@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from elite_deck.core.store import StateStore, diff_dict
+from back.core.store import StateStore, diff_dict
 
 
 async def test_load_game_and_loadout() -> None:

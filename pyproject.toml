@@ -29,17 +29,17 @@ dev = [
 ]
 
 [project.scripts]
-elite-deck = "elite_deck.__main__:main"
+elite-deck = "back.__main__:main"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/elite_deck"]
+packages = ["src/back"]
 
 [tool.hatch.build.targets.wheel.force-include]
-"src/elite_deck/py.typed" = "elite_deck/py.typed"
+"src/back/py.typed" = "back/py.typed"
 
 # ── Ruff (lint + format) ──────────────────────────────────────────────────────
 [tool.ruff]
@@ -52,7 +52,7 @@ select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 ignore = ["B008"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["elite_deck"]
+known-first-party = ["back"]
 
 # ── Mypy (typage strict) ──────────────────────────────────────────────────────
 [tool.mypy]

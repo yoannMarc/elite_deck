@@ -1,0 +1,570 @@
+/* ═══════════════════════════════════════════════════════════════════
+   elite-deck.css — Thème Elite Dangerous partagé
+   Toutes les variables, composants et utilitaires du projet.
+   Importé par tous les fichiers HTML.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Variables (design tokens) ───────────────────────────────────── */
+:root {
+  /* Couleurs de base */
+  --bg:           #06090f;
+  --panel:        #0b1018;
+  --panel-deep:   #080c12;
+  --edge:         #16202e;
+  --edge-hot:     #663413;
+
+  /* Accent principal (orange ED) */
+  --accent:       #ff7a00;
+  --accent-glow:  #ff5500;
+  --accent-dim:   #7a3a00;
+
+  /* Texte */
+  --text:         #ffb066;
+  --bright:       #ffd9a8;
+  --dim:          #5a6470;
+  --dim2:         #3a4250;
+
+  /* Couleurs sémantiques */
+  --amber:        #ff9d2e;
+  --red:          #ff3b3b;
+  --red-glow:     #ff1a1a;
+  --green:        #34d97b;
+  --green-glow:   #20c060;
+  --blue:         #2bb3ff;
+  --blue-glow:    #0090e0;
+  --off:          #1a2230;
+
+  /* Effets */
+  --scan:         rgba(255, 122, 0, 0.035);
+
+  /* Typographie */
+  --font:         "Jura", "Segoe UI", system-ui, sans-serif;
+  --font-mono:    "Courier New", monospace;
+
+  /* Espacements */
+  --gap:          14px;
+  --radius-cut:   13px; /* pour clip-path angulaire */
+}
+
+/* ── Reset & base ─────────────────────────────────────────────────── */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+  min-height: 100vh;
+  user-select: none;
+}
+
+/* Scanline CRT — ambiance ED */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg, transparent 0 2px, var(--scan) 2px 4px
+  );
+}
+
+/* ── Layout ───────────────────────────────────────────────────────── */
+.wrap {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 12px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--gap);
+}
+
+.grid.full { grid-template-columns: 1fr; }
+
+@media (max-width: 760px) {
+  .grid { grid-template-columns: 1fr; }
+}
+
+.col-full { grid-column: 1 / -1; }
+
+/* ── Header ───────────────────────────────────────────────────────── */
+.ed-header {
+  display: flex;
+  align-items: center;
+  gap: var(--gap);
+  padding: 12px 18px;
+  background: linear-gradient(90deg, var(--panel), transparent);
+  border-left: 4px solid var(--accent);
+  margin-bottom: var(--gap);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 16px 100%, 0 calc(100% - 16px));
+}
+
+.ed-header h1 {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 4px;
+  color: var(--accent);
+  text-transform: uppercase;
+}
+
+/* ── Connexion indicator ──────────────────────────────────────────── */
+.conn {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.conn .dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--red);
+  box-shadow: 0 0 8px var(--red);
+  transition: all 0.3s;
+}
+
+.conn.live .dot {
+  background: var(--green);
+  box-shadow: 0 0 8px var(--green);
+}
+
+/* ── Tab navigation ───────────────────────────────────────────────── */
+.tabs {
+  display: flex;
+  gap: 2px;
+  margin-bottom: var(--gap);
+  border-bottom: 1px solid var(--edge);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tabs::-webkit-scrollbar { display: none; }
+
+.tab {
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 10px 18px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--dim);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.tab:hover { color: var(--text); }
+
+.tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+/* ── Panel ────────────────────────────────────────────────────────── */
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--edge);
+  border-top: 1px solid var(--edge-hot);
+  padding: 14px 16px;
+  clip-path: polygon(
+    0 0, 100% 0,
+    100% calc(100% - var(--radius-cut)),
+    calc(100% - var(--radius-cut)) 100%,
+    0 100%
+  );
+}
+
+.panel h2 {
+  font-size: 11px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--edge);
+  padding-bottom: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* ── Data row ─────────────────────────────────────────────────────── */
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 4px 0;
+  font-size: 13px;
+}
+
+.row .k { color: var(--dim); letter-spacing: 1px; }
+.row .v { color: var(--bright); font-weight: 600; font-variant-numeric: tabular-nums; }
+.row .v.big { font-size: 20px; color: var(--accent); }
+.row .v.warn { color: var(--red); }
+.row .v.ok { color: var(--green); }
+
+/* ── Progress bars ────────────────────────────────────────────────── */
+.bar {
+  height: 7px;
+  background: var(--off);
+  margin-top: 4px;
+  overflow: hidden;
+}
+
+.bar > span {
+  display: block;
+  height: 100%;
+  transition: width 0.4s ease;
+}
+
+.bar.hull > span { background: var(--green); box-shadow: 0 0 8px var(--green-glow); }
+.bar.fuel > span { background: var(--accent); box-shadow: 0 0 8px var(--accent-glow); }
+.bar.danger > span { background: var(--red); box-shadow: 0 0 8px var(--red-glow); }
+
+/* ── Power pips ───────────────────────────────────────────────────── */
+.pips {
+  display: flex;
+  gap: 18px;
+  justify-content: space-around;
+  padding: 6px 0;
+}
+
+.pipgroup { text-align: center; }
+
+.pipgroup .label {
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--dim);
+  margin-bottom: 6px;
+}
+
+.pipbars { display: flex; gap: 3px; justify-content: center; }
+
+.pipbar { width: 11px; height: 24px; background: var(--off); }
+.pipbar.fill { box-shadow: 0 0 6px currentColor; }
+
+.sys .pipbar.fill { background: var(--blue);  color: var(--blue); }
+.eng .pipbar.fill { background: var(--green); color: var(--green); }
+.wep .pipbar.fill { background: var(--red);   color: var(--red); }
+
+.pipgroup .num {
+  font-size: 13px;
+  margin-top: 5px;
+  color: var(--bright);
+  font-weight: 700;
+}
+
+/* ── Status chips ─────────────────────────────────────────────────── */
+.flags { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.chip {
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 5px 9px;
+  border: 1px solid var(--off);
+  color: var(--dim);
+  clip-path: polygon(
+    6px 0, 100% 0, 100% calc(100% - 6px),
+    calc(100% - 6px) 100%, 0 100%, 0 6px
+  );
+  transition: all 0.15s;
+}
+
+.chip.on {
+  color: #000;
+  background: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 0 10px var(--accent-glow);
+  font-weight: 700;
+}
+
+.chip.warn.on {
+  background: var(--red);
+  border-color: var(--red);
+  box-shadow: 0 0 10px var(--red-glow);
+}
+
+/* ── Macro buttons ────────────────────────────────────────────────── */
+.macro-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 10px;
+}
+
+.macro {
+  position: relative;
+  border: 1px solid var(--off);
+  background: var(--panel-deep);
+  color: var(--text);
+  padding: 16px 10px;
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: 0.12s;
+  clip-path: polygon(
+    8px 0, 100% 0, 100% calc(100% - 8px),
+    calc(100% - 8px) 100%, 0 100%, 0 8px
+  );
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  --c: var(--accent);
+}
+
+.macro.amber { --c: var(--amber); }
+.macro.red   { --c: var(--red); }
+.macro.green { --c: var(--green); }
+.macro.blue  { --c: var(--blue); }
+
+.macro:active { transform: scale(0.95); }
+.macro:hover  { border-color: var(--c); color: var(--c); }
+
+.macro.on {
+  background: var(--c);
+  color: #000;
+  border-color: var(--c);
+  box-shadow: 0 0 14px var(--c);
+}
+
+.macro.flash { animation: flash 0.4s ease; }
+@keyframes flash {
+  0%   { box-shadow: 0 0 0 var(--c); }
+  30%  { box-shadow: 0 0 18px var(--c); }
+  100% { box-shadow: 0 0 0 transparent; }
+}
+
+.macro .cat {
+  position: absolute;
+  top: 5px;
+  left: 8px;
+  font-size: 8px;
+  letter-spacing: 1px;
+  color: var(--dim);
+  font-weight: 400;
+}
+
+.macro .bind {
+  position: absolute;
+  bottom: 4px;
+  right: 7px;
+  font-size: 8px;
+  letter-spacing: 0.5px;
+  color: var(--dim);
+  font-weight: 400;
+}
+
+.macro.on .bind { color: rgba(0, 0, 0, 0.65); }
+
+/* Mode configuration */
+body.configuring .macro { border-style: dashed; }
+body.configuring .macro::after {
+  content: "⚙";
+  position: absolute;
+  top: 4px;
+  right: 7px;
+  font-size: 11px;
+  color: var(--accent);
+}
+
+/* ── Config toggle button ─────────────────────────────────────────── */
+.cfg-toggle {
+  font-family: var(--font);
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 5px 12px;
+  border: 1px solid var(--off);
+  background: transparent;
+  color: var(--dim);
+  cursor: pointer;
+  clip-path: polygon(
+    5px 0, 100% 0, 100% calc(100% - 5px),
+    calc(100% - 5px) 100%, 0 100%, 0 5px
+  );
+  transition: all 0.15s;
+}
+
+.cfg-toggle.on {
+  color: #000;
+  background: var(--accent);
+  border-color: var(--accent);
+  font-weight: 700;
+}
+
+/* ── Modal ────────────────────────────────────────────────────────── */
+.modal-bg {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 4, 8, 0.82);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+}
+
+.modal {
+  width: min(440px, 100%);
+  background: var(--panel);
+  border: 1px solid var(--edge-hot);
+  padding: 20px;
+  clip-path: polygon(
+    0 0, 100% 0,
+    100% calc(100% - 16px),
+    calc(100% - 16px) 100%, 0 100%
+  );
+}
+
+.modal h3 {
+  color: var(--accent);
+  font-size: 14px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.modal .sub { color: var(--dim); font-size: 11px; margin-bottom: 16px; }
+
+.modal .current {
+  background: var(--panel-deep);
+  border: 1px solid var(--edge);
+  padding: 10px 12px;
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal .current .lbl {
+  color: var(--dim);
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.modal .current .val {
+  color: var(--bright);
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.modal .section { margin-bottom: 14px; }
+
+.modal .section .title {
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-bottom: 8px;
+}
+
+.modal .actions { display: flex; gap: 10px; margin-top: 18px; }
+
+/* ── Buttons (modal) ──────────────────────────────────────────────── */
+.mbtn {
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 11px 14px;
+  border: 1px solid var(--off);
+  background: var(--panel-deep);
+  color: var(--text);
+  cursor: pointer;
+  clip-path: polygon(
+    6px 0, 100% 0, 100% calc(100% - 6px),
+    calc(100% - 6px) 100%, 0 100%, 0 6px
+  );
+  width: 100%;
+  transition: all 0.12s;
+}
+
+.mbtn:active    { transform: scale(0.98); }
+.mbtn.primary   { background: var(--accent);  color: #000; border-color: var(--accent); }
+.mbtn.detecting { background: var(--blue);    color: #000; border-color: var(--blue); }
+.mbtn.danger    { background: var(--red);     color: #000; border-color: var(--red); }
+
+/* ── Form inputs ──────────────────────────────────────────────────── */
+.code-row { display: flex; gap: 8px; align-items: center; }
+
+.code-row input {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font);
+  font-size: 13px;
+  padding: 9px 10px;
+  background: var(--panel-deep);
+  border: 1px solid var(--edge);
+  color: var(--bright);
+}
+
+.mods { display: flex; gap: 12px; margin: 8px 0; }
+.mods label {
+  font-size: 11px;
+  color: var(--text);
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  cursor: pointer;
+}
+
+.quick { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.quick button {
+  font-family: var(--font);
+  font-size: 11px;
+  padding: 6px 10px;
+  border: 1px solid var(--off);
+  background: transparent;
+  color: var(--blue);
+  cursor: pointer;
+  transition: border-color 0.12s;
+}
+.quick button:hover { border-color: var(--blue); }
+
+/* ── Route list ───────────────────────────────────────────────────── */
+.route { list-style: none; font-size: 12px; }
+.route li { padding: 3px 0; display: flex; gap: 8px; }
+.route li::before { content: "›"; color: var(--accent); }
+
+/* ── Utilities ────────────────────────────────────────────────────── */
+.empty    { color: var(--dim); font-size: 12px; font-style: italic; }
+.ack-hint { color: var(--dim); font-weight: 400; letter-spacing: 1px; font-size: 10px; }
+
+footer {
+  text-align: center;
+  color: var(--dim);
+  font-size: 10px;
+  letter-spacing: 2px;
+  margin-top: 16px;
+  text-transform: uppercase;
+}
+
+/* ── Vue transition (swap d'onglets) ──────────────────────────────── */
+.tab-enter-active, .tab-leave-active { transition: opacity 0.15s, transform 0.15s; }
+.tab-enter-from  { opacity: 0; transform: translateX(12px); }
+.tab-leave-to    { opacity: 0; transform: translateX(-12px); }

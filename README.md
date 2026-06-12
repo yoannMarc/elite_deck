@@ -187,7 +187,7 @@ uv run python -m elite_deck --config mon_profil.toml --port 3301
 ## Architecture
 
 ```
-src/elite_deck/
+src/back/
 ├── __main__.py          ← point d'entrée CLI
 ├── app.py               ← racine de composition (câblage)
 ├── config.py            ← config typée (TOML)
@@ -210,7 +210,6 @@ src/elite_deck/
 │   ├── edsm.py          ← provider EDSM (stub)
 │   └── fdevids.py       ← provider FDevIDs (stub)
 └── web/
-    └── index.html       ← client tablette
 ```
 
 Principes appliqués :

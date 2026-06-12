@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import time
 
-from elite_deck.macros.engine import MacroEngine, NullBackend
-from elite_deck.macros.keyspec import NAME_TO_VK, KeySpec
-from elite_deck.macros.registry import MacroRegistry
+from back.macros.engine import MacroEngine, NullBackend
+from back.macros.keyspec import NAME_TO_VK, KeySpec
+from back.macros.registry import MacroRegistry
 
 # ── KeySpec ───────────────────────────────────────────────────────────────────
 

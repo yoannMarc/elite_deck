@@ -19,7 +19,7 @@ tasks:
         platforms: [darwin]
       - cmd: xdg-open "http://{{.HOST}}:{{.PORT}}"
         platforms: [linux]
-      - uv run python -m elite_deck {{.CLI_ARGS}}
+      - uv run python -m back {{.CLI_ARGS}}
 
   run:dev:
     desc: "Lance en mode verbose"

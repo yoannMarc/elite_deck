@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from elite_deck.macros.capture import KeyCaptureService, NullCaptureBackend
-from elite_deck.macros.keyspec import KeySpec
-from elite_deck.macros.store import KeybindStore
+from back.macros.capture import KeyCaptureService, NullCaptureBackend
+from back.macros.keyspec import KeySpec
+from back.macros.store import KeybindStore
 
 
 async def test_capture_returns_preset() -> None:
