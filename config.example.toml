@@ -1,0 +1,29 @@
+# Configuration elite_deck — copier en config.toml et adapter.
+# Toutes les sections sont optionnelles ; les valeurs par défaut s'appliquent.
+
+[server]
+host = "0.0.0.0"   # 0.0.0.0 = accessible depuis la tablette sur le réseau local
+port = 3300
+
+[ingest]
+# Laisser vide pour l'auto-détection du dossier Saved Games.
+journal_dir = ""
+replay_history = true
+poll_interval = 0.4
+
+[integrations]
+# Anticipées — laisser désactivées tant que non implémentées.
+edsm_enabled = false
+fdevids_enabled = false
+
+# Surcharge des raccourcis clavier (doivent correspondre à ceux d'Elite Dangerous).
+# macro_id = "touche"
+[keybinds]
+landing_gear = "g"
+hardpoints = "u"
+cargo_scoop = "home"
+lights = "insert"
+analysis_mode = "f7"
+sys_power = "f1"
+eng_power = "f2"
+wep_power = "f3"
