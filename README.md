@@ -23,52 +23,164 @@ une page web.
 
 ---
 
-## Pourquoi le web et pas tkinter ?
+## Prérequis
 
-L'affichage cible est une **tablette**. tkinter est cantonné au bureau et ne se
-diffuse pas sur le réseau. Un client web servi par le backend est accessible
-depuis n'importe quel appareil, tactile et responsive par nature, et découple
-proprement l'interface du moteur — donc plus maintenable et évolutif.
+- **Python 3.11+**
+- **[uv](https://docs.astral.sh/uv/)** — gestionnaire d'environnement Python (remplace pip/venv)
+- **[task](https://taskfile.dev)** — task runner (optionnel mais recommandé)
 
 ---
 
 ## Installation
 
-Avec [uv](https://docs.astral.sh/uv/) (recommandé) :
+### 1. Installer uv (si absent)
 
-```bash
-uv sync                          # cœur seul
-uv sync --extra macros           # + envoi de touches (sur le PC du jeu)
-uv sync --all-extras             # tout (dev, intégrations…)
+**Windows (PowerShell) :**
+```powershell
+winget install astral-sh.uv
 ```
 
-Ou pip :
+**macOS / Linux :**
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+Vérifier :
+```bash
+uv --version
+```
+
+---
+
+### 2. Installer les dépendances du projet
 
 ```bash
-pip install -e ".[macros]"
+# Cœur uniquement (affichage tablette, lecture journaux)
+uv sync
+
+# + envoi de touches clavier (sur le PC qui fait tourner Elite Dangerous)
+uv sync --extra macros
+
+# Tout (dev, lint, tests, macros)
+uv sync --all-extras
+```
+
+> **Note :** `uv sync` crée automatiquement le virtualenv `.venv/` dans le dossier projet.
+
+---
+
+### 3. Installer task (si absent)
+
+**Windows :**
+```powershell
+winget install Task.Task
+```
+
+**macOS :**
+```bash
+brew install go-task/tap/go-task
+```
+
+**Linux :**
+```bash
+sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b ~/.local/bin
+```
+
+Vérifier :
+```bash
+task --version
 ```
 
 ---
 
 ## Lancement
 
-```bash
-# Sur le PC qui fait tourner Elite Dangerous
-python -m elite_deck --host 0.0.0.0
-
-# Puis sur la tablette (même Wi-Fi) : http://<ip-du-pc>:3300
-```
-
-Options :
+### Via task (recommandé)
 
 ```bash
-python -m elite_deck --config config.toml
-python -m elite_deck --journal-dir "C:/.../Elite Dangerous"
-python -m elite_deck --port 3300 --no-replay -v
+task          # lance le serveur + ouvre http://localhost:3300
+task run      # identique
+task run:dev  # mode verbose (logs détaillés)
 ```
 
-Copie `config.example.toml` → `config.toml` pour personnaliser les raccourcis,
-le port, et (plus tard) activer les intégrations.
+### Via uv directement
+
+```bash
+uv run python -m elite_deck
+uv run python -m elite_deck --verbose
+uv run python -m elite_deck --config config.toml
+```
+
+**Depuis la tablette (même réseau Wi-Fi) :** `http://<ip-du-pc>:3300`
+
+---
+
+## Commandes task disponibles
+
+| Commande | Description |
+|---|---|
+| `task` / `task run` | Lance le serveur et ouvre le navigateur |
+| `task run:dev` | Lance en mode verbose |
+| `task install` | `uv sync --all-extras` (install complète) |
+| `task test` | Lance pytest |
+| `task lint` | Ruff check (lint) |
+| `task fmt` | Ruff format + fix automatique |
+
+---
+
+## Configuration
+
+Copier l'exemple et l'adapter :
+
+```bash
+cp config.example.toml config.toml
+```
+
+Le fichier `config.toml` est **optionnel** — sans lui, les valeurs par défaut s'appliquent.
+Il est ignoré par git (ajouté au `.gitignore`).
+
+### Référence complète
+
+```toml
+[server]
+host = "0.0.0.0"   # 0.0.0.0 = accessible depuis la tablette sur le réseau local
+                   # "127.0.0.1" = local uniquement
+port = 3300        # port HTTP + WebSocket
+
+[ingest]
+journal_dir = ""         # vide = auto-détection (Saved Games d'Elite Dangerous)
+                         # exemple Windows : "C:/Users/Toi/Saved Games/Frontier Developments/Elite Dangerous"
+replay_history = true    # rejoue les événements du dernier fichier journal au démarrage
+poll_interval = 0.4      # intervalle de polling des fichiers JSON (secondes)
+
+[integrations]
+edsm_enabled    = false  # données système via EDSM (anticipé, non implémenté)
+fdevids_enabled = false  # noms lisibles via FDevIDs (anticipé, non implémenté)
+
+# Surcharge des raccourcis clavier.
+# Les touches ici doivent correspondre exactement à celles configurées
+# dans Elite Dangerous → Options → Commandes.
+[keybinds]
+landing_gear  = "g"
+hardpoints    = "u"
+cargo_scoop   = "home"
+lights        = "insert"
+analysis_mode = "f7"
+sys_power     = "f1"
+eng_power     = "f2"
+wep_power     = "f3"
+# Codes virtuels (touches absentes du clavier, ex. F13-F24) :
+# silent_running = "vk:135"       # F24
+# avec modificateurs :
+# deploy_fighters = "ctrl+f5"
+```
+
+### Passer une config en argument
+
+```bash
+task run -- --config mon_profil.toml
+uv run python -m elite_deck --config mon_profil.toml --port 3301
+```
 
 ---
 
@@ -86,7 +198,10 @@ src/elite_deck/
 ├── ingest/
 │   └── watcher.py       ← lecture async des fichiers du jeu + rotation
 ├── macros/
-│   ├── engine.py        ← envoi de touches (backend abstrait)
+│   ├── keyspec.py       ← représentation riche d'une touche (char/nom/vk/scan)
+│   ├── engine.py        ← envoi de touches (backends pynput / scancode / null)
+│   ├── capture.py       ← détection d'une touche (listener PC, async)
+│   ├── store.py         ← persistance des raccourcis (JSON)
 │   └── registry.py      ← définitions de macros
 ├── server/
 │   └── app.py           ← aiohttp : HTTP + WebSocket (état ↔ macros)
@@ -98,7 +213,7 @@ src/elite_deck/
     └── index.html       ← client tablette
 ```
 
-Principes appliqués (standards Python 2026) :
+Principes appliqués :
 - **src layout** + `pyproject.toml` PEP 621
 - **type hints** stricts partout, `from __future__ import annotations`
 - **async-first** : un seul event loop pour ingestion + serveur
@@ -112,15 +227,50 @@ Principes appliqués (standards Python 2026) :
 ## Macros
 
 Définies dans `macros/registry.py`. Chaque macro a un identifiant stable, un
-libellé, un raccourci (configurable) et, si pertinent, un `status_flag` qui
-allume le bouton quand l'action est active dans le jeu (ex. train sorti).
+libellé, une touche (`KeySpec`) et, si pertinent, un `status_flag` qui allume le
+bouton quand l'action est active dans le jeu (ex. train sorti).
 
-Les keybinds **ne sont jamais exposés** au client : la tablette envoie un
-identifiant de macro, le serveur résout le raccourci et l'exécute. Les
-raccourcis doivent correspondre à ceux configurés dans Elite Dangerous.
+### Configuration des raccourcis depuis la tablette
 
-Ajouter une macro = ajouter une entrée dans `DEFAULT_MACROS`. Le bouton apparaît
-automatiquement sur la tablette.
+Le bouton **⚙ Configurer** passe le deck en mode configuration. Un appui sur une
+macro ouvre alors une fenêtre permettant de redéfinir sa touche de deux façons :
+
+1. **Détection** — « Appuyer sur une touche » : un listener démarre sur le PC,
+   la prochaine touche pressée (avec ses modificateurs) est capturée et
+   convertie en `KeySpec`. La capture a lieu sur le PC, pas dans le navigateur,
+   car la touche doit être détectable par Elite Dangerous.
+2. **Saisie de code / nom** — pour définir une touche **absente du clavier**
+   mais détectable par ED. On saisit :
+   - un caractère : `g`
+   - un nom : `home`, `f7`, `numpad_0`
+   - un **code virtuel** : `vk:135` (= F24)
+   - avec modificateurs (Ctrl / Shift / Alt)
+
+Le cas d'usage central est **F13-F24** : ED les détecte, presque aucun clavier
+ne les a, donc aucun conflit avec un raccourci existant. Des boutons rapides
+(F13…F16) sont fournis.
+
+Les raccourcis modifiés sont **persistés** (`keybinds.json` dans le dossier de
+config) et **diffusés** à tous les clients connectés. Ils doivent correspondre à
+ceux configurés dans Elite Dangerous (Options → Commandes).
+
+### Représentation d'une touche : `KeySpec`
+
+```python
+KeySpec(char="g")                          # caractère
+KeySpec(name="home")                       # touche nommée
+KeySpec(vk=135, modifiers=["ctrl"])        # code virtuel (Ctrl+F24)
+KeySpec.parse("ctrl+shift+g")             # depuis une chaîne
+```
+
+### Backends d'envoi
+
+Abstraits derrière un `Protocol` :
+- `PynputBackend` (défaut) — envoi par VK, multiplateforme.
+- `ScanCodeBackend` — envoi par **code de scan** via SendInput (Windows). Plus
+  fiable pour les jeux DirectInput comme ED, qui lisent souvent les scan codes
+  plutôt que les VK injectés. À activer si certaines touches ne « passent » pas.
+- `NullBackend` — factice (tests, headless).
 
 ---
 
@@ -146,9 +296,14 @@ config), aucun changement ailleurs.
 ## Tests
 
 ```bash
-pytest                 # agrégation, macros, parsing
-ruff check src tests   # lint
-mypy src               # typage strict
+task test              # pytest
+task lint              # ruff check
+task fmt               # ruff format + fix
+
+# Ou directement :
+uv run pytest
+uv run ruff check src tests
+uv run mypy src
 ```
 
 ---

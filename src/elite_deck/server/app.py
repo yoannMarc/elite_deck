@@ -3,10 +3,12 @@
 Routes :
   GET  /              → client web (tablette)
   GET  /api/state     → snapshot complet
-  GET  /api/macros    → liste des macros (pour dessiner les boutons)
+  GET  /api/macros    → liste des macros (boutons + config)
   WS   /ws            → bidirectionnel :
                           ← snapshot + diffs d'état (serveur → client)
-                          → exécution de macros (client → serveur)
+                          ← macros + mises à jour de raccourcis
+                          → exécution de macros
+                          → capture / saisie de raccourci (configuration)
 """
 
 from __future__ import annotations
@@ -14,13 +16,18 @@ from __future__ import annotations
 import asyncio
 import logging
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from aiohttp import WSMsgType, web
 
-from elite_deck.core.store import StateStore
-from elite_deck.macros.engine import MacroEngine
-from elite_deck.macros.registry import MacroRegistry
+from elite_deck.macros.keyspec import KeySpec
+
+if TYPE_CHECKING:
+    from elite_deck.core.store import StateStore
+    from elite_deck.macros.capture import KeyCaptureService
+    from elite_deck.macros.engine import MacroEngine
+    from elite_deck.macros.registry import MacroRegistry
+    from elite_deck.macros.store import KeybindStore
 
 logger = logging.getLogger(__name__)
 
@@ -34,15 +41,20 @@ class TerminalServer:
         macros: MacroRegistry,
         engine: MacroEngine,
         *,
+        capture: KeyCaptureService | None = None,
+        keybinds: KeybindStore | None = None,
         host: str = "0.0.0.0",
         port: int = 3300,
     ) -> None:
         self.store = store
         self.macros = macros
         self.engine = engine
+        self.capture = capture
+        self.keybinds = keybinds
         self.host = host
         self.port = port
         self.app = web.Application()
+        self._clients: set[web.WebSocketResponse] = set()
         self._setup_routes()
 
     def _setup_routes(self) -> None:
@@ -73,9 +85,9 @@ class TerminalServer:
         ws = web.WebSocketResponse(heartbeat=20)
         await ws.prepare(request)
         peer = request.remote
+        self._clients.add(ws)
         logger.info("Client WS connecté : %s", peer)
 
-        # Snapshot initial + liste des macros
         await ws.send_json({"type": "snapshot", "state": self.store.snapshot})
         await ws.send_json({"type": "macros", "macros": self.macros.to_client_list()})
 
@@ -91,6 +103,7 @@ class TerminalServer:
         finally:
             pusher.cancel()
             self.store.unsubscribe(queue)
+            self._clients.discard(ws)
             logger.info("Client WS déconnecté : %s", peer)
         return ws
 
@@ -104,17 +117,30 @@ class TerminalServer:
         except (ConnectionResetError, asyncio.CancelledError):
             pass
 
+    async def _broadcast(self, payload: dict[str, Any]) -> None:
+        for client in list(self._clients):
+            if not client.closed:
+                try:
+                    await client.send_json(payload)
+                except ConnectionResetError:
+                    self._clients.discard(client)
+
+    # ── Routage des messages client ───────────────────────────────────
+
     async def _handle_client_message(
         self, ws: web.WebSocketResponse, data: dict[str, Any]
     ) -> None:
-        msg_type = data.get("type")
-
-        if msg_type == "resync":
-            await ws.send_json({"type": "snapshot", "state": self.store.snapshot})
-
-        elif msg_type == "macro":
-            macro_id = data.get("id", "")
-            await self._execute_macro(ws, macro_id)
+        match data.get("type"):
+            case "resync":
+                await ws.send_json({"type": "snapshot", "state": self.store.snapshot})
+            case "macro":
+                await self._execute_macro(ws, data.get("id", ""))
+            case "capture_start":
+                await self._start_capture(ws)
+            case "set_keybind":
+                await self._set_keybind(ws, data)
+            case _:
+                pass
 
     async def _execute_macro(self, ws: web.WebSocketResponse, macro_id: str) -> None:
         macro = self.macros.get(macro_id)
@@ -123,11 +149,44 @@ class TerminalServer:
                                 "error": "inconnu"})
             return
         if macro.kind == "sequence":
-            self.engine.send_sequence(macro.sequence)
+            self.engine.tap_sequence(macro.sequence)
         else:
-            self.engine.send(macro.keybind)
+            self.engine.tap(macro.key)
         logger.info("Macro exécutée : %s", macro_id)
         await ws.send_json({"type": "macro_ack", "id": macro_id, "ok": True})
+
+    async def _start_capture(self, ws: web.WebSocketResponse) -> None:
+        if self.capture is None:
+            await ws.send_json({"type": "capture_result", "keyspec": None,
+                                "error": "capture indisponible"})
+            return
+        spec = await self.capture.capture(timeout=10.0)
+        if spec is None:
+            await ws.send_json({"type": "capture_result", "keyspec": None,
+                                "error": "aucune touche détectée"})
+        else:
+            await ws.send_json({"type": "capture_result", "keyspec": spec.to_dict()})
+
+    async def _set_keybind(
+        self, ws: web.WebSocketResponse, data: dict[str, Any]
+    ) -> None:
+        macro_id = data.get("id", "")
+        raw = data.get("keyspec")
+        if not macro_id or not isinstance(raw, dict):
+            await ws.send_json({"type": "keybind_updated", "id": macro_id,
+                                "ok": False, "error": "données invalides"})
+            return
+        spec = KeySpec.from_dict(raw)
+        if not self.macros.set_key(macro_id, spec):
+            await ws.send_json({"type": "keybind_updated", "id": macro_id,
+                                "ok": False, "error": "macro inconnue"})
+            return
+        if self.keybinds is not None:
+            self.keybinds.set(macro_id, spec)
+        logger.info("Raccourci mis à jour : %s → %s", macro_id, spec.display())
+        # Diffuse à tous les clients pour synchroniser l'affichage
+        await self._broadcast({"type": "keybind_updated", "id": macro_id,
+                               "ok": True, "keyspec": spec.to_dict()})
 
     # ── Cycle de vie ──────────────────────────────────────────────────
 

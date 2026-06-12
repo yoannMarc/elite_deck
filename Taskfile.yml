@@ -1,0 +1,51 @@
+version: "3"
+
+vars:
+  HOST: localhost
+  PORT: 3300
+
+tasks:
+  default:
+    desc: "Lance le serveur et ouvre le navigateur"
+    cmds:
+      - task: run
+
+  run:
+    desc: "Lance elite-deck et ouvre http://{{.HOST}}:{{.PORT}}"
+    cmds:
+      - cmd: cmd /c start "" "http://{{.HOST}}:{{.PORT}}"
+        platforms: [windows]
+      - cmd: open "http://{{.HOST}}:{{.PORT}}"
+        platforms: [darwin]
+      - cmd: xdg-open "http://{{.HOST}}:{{.PORT}}"
+        platforms: [linux]
+      - uv run python -m elite_deck {{.CLI_ARGS}}
+
+  run:dev:
+    desc: "Lance en mode verbose"
+    cmds:
+      - task: run
+        vars:
+          CLI_ARGS: "--verbose"
+
+  install:
+    desc: "Installe toutes les dépendances (uv sync --all-extras)"
+    cmds:
+      - uv sync --all-extras
+
+  test:
+    desc: "Lance les tests"
+    cmds:
+      - uv run pytest
+
+  lint:
+    desc: "Lint + format check (ruff)"
+    cmds:
+      - uv run ruff check src tests
+      - uv run ruff format --check src tests
+
+  fmt:
+    desc: "Auto-format (ruff)"
+    cmds:
+      - uv run ruff format src tests
+      - uv run ruff check --fix src tests

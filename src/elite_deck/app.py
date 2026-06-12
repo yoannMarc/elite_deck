@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from pathlib import Path
+from typing import Any
 
 from elite_deck.config import AppConfig
 from elite_deck.core.store import StateStore
@@ -17,8 +18,10 @@ from elite_deck.ingest.watcher import JournalWatcher, default_journal_dir
 from elite_deck.integrations.base import IntegrationManager
 from elite_deck.integrations.edsm import EDSMProvider
 from elite_deck.integrations.fdevids import FDevIDsProvider
+from elite_deck.macros.capture import KeyCaptureService
 from elite_deck.macros.engine import MacroEngine
 from elite_deck.macros.registry import MacroRegistry
+from elite_deck.macros.store import KeybindStore
 from elite_deck.server.app import TerminalServer
 
 logger = logging.getLogger(__name__)
@@ -35,8 +38,12 @@ class Application:
 
         # Macros
         self.macros = MacroRegistry()
-        self.macros.apply_keybinds(config.keybinds)
+        # Ordre d'application : défauts → keybinds TOML (legacy) → store JSON
+        self.macros.apply_keybind_strings(config.keybinds)
+        self.keybinds = KeybindStore()
+        self.macros.apply_keyspecs(self.keybinds.all())
         self.engine = MacroEngine()  # backend auto-détecté (Null si headless)
+        self.capture = KeyCaptureService()  # backend auto-détecté
 
         # Intégrations (anticipées, désactivées par défaut)
         self.integrations = IntegrationManager([
@@ -62,18 +69,19 @@ class Application:
         # Serveur
         self.server = TerminalServer(
             self.store, self.macros, self.engine,
+            capture=self.capture, keybinds=self.keybinds,
             host=config.server.host, port=config.server.port,
         )
 
     # ── Routage ingestion → store ─────────────────────────────────────
 
-    async def _on_event(self, event: dict) -> None:
+    async def _on_event(self, event: dict[str, Any]) -> None:
         await self.store.apply_event(event)
         # Déclencheur d'enrichissement : changement de système
         if event.get("event") in ("FSDJump", "CarrierJump", "Location"):
             await self._run_enrichment()
 
-    async def _on_file(self, fname: str, data: dict) -> None:
+    async def _on_file(self, fname: str, data: dict[str, Any]) -> None:
         if fname == "Status.json":
             await self.store.apply_status(data)
         elif fname == "Cargo.json":

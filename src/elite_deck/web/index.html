@@ -100,6 +100,54 @@
   .empty { color:var(--dim); font-size:12px; font-style:italic; }
   footer { text-align:center; color:var(--dim); font-size:10px; letter-spacing:2px;
     margin-top:16px; text-transform:uppercase; }
+
+  /* ── Configuration ───────────────────────────────────────────── */
+  .deck h2 { justify-content:space-between; }
+  .cfg-toggle { font-family:inherit; font-size:10px; letter-spacing:2px; text-transform:uppercase;
+    padding:5px 12px; border:1px solid var(--off); background:transparent; color:var(--dim);
+    cursor:pointer; clip-path:polygon(5px 0,100% 0,100% calc(100% - 5px),calc(100% - 5px) 100%,0 100%,0 5px); }
+  .cfg-toggle.on { color:#000; background:var(--accent); border-color:var(--accent); font-weight:700; }
+  /* Pastille du raccourci courant sur chaque macro */
+  .macro .bind { position:absolute; bottom:4px; right:7px; font-size:8px; letter-spacing:.5px;
+    color:var(--dim); font-weight:400; }
+  .macro.on .bind { color:rgba(0,0,0,.65); }
+  /* En mode config, les boutons signalent qu'ils sont configurables */
+  body.configuring .macro { border-style:dashed; }
+  body.configuring .macro::after { content:"⚙"; position:absolute; top:4px; right:7px; font-size:11px; color:var(--accent); }
+
+  /* Modal */
+  .modal-bg { position:fixed; inset:0; background:rgba(2,4,8,.82); z-index:1000;
+    display:none; align-items:center; justify-content:center; padding:18px; }
+  .modal-bg.show { display:flex; }
+  .modal { width:min(440px,100%); background:var(--panel); border:1px solid var(--edge-hot);
+    padding:20px; clip-path:polygon(0 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%); }
+  .modal h3 { color:var(--accent); font-size:14px; letter-spacing:2px; text-transform:uppercase;
+    margin-bottom:4px; }
+  .modal .sub { color:var(--dim); font-size:11px; margin-bottom:16px; }
+  .modal .current { background:#0e1521; border:1px solid var(--edge); padding:10px 12px;
+    margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; }
+  .modal .current .lbl { color:var(--dim); font-size:10px; letter-spacing:1px; text-transform:uppercase; }
+  .modal .current .val { color:var(--bright); font-weight:700; font-size:16px; }
+  .modal .section { margin-bottom:14px; }
+  .modal .section .title { font-size:10px; letter-spacing:2px; text-transform:uppercase;
+    color:var(--dim); margin-bottom:8px; }
+  .mbtn { font-family:inherit; font-size:12px; font-weight:700; letter-spacing:1px; text-transform:uppercase;
+    padding:11px 14px; border:1px solid var(--off); background:#0e1521; color:var(--text); cursor:pointer;
+    clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px); width:100%; }
+  .mbtn:active { transform:scale(.98); }
+  .mbtn.primary { background:var(--accent); color:#000; border-color:var(--accent); }
+  .mbtn.detecting { background:var(--blue); color:#000; border-color:var(--blue); }
+  .code-row { display:flex; gap:8px; align-items:center; }
+  .code-row input, .code-row select { font-family:inherit; font-size:13px; padding:9px 10px;
+    background:#0e1521; border:1px solid var(--edge); color:var(--bright); }
+  .code-row input { flex:1; min-width:0; }
+  .mods { display:flex; gap:12px; margin:8px 0; }
+  .mods label { font-size:11px; color:var(--text); display:flex; gap:5px; align-items:center; cursor:pointer; }
+  .modal .actions { display:flex; gap:10px; margin-top:18px; }
+  .quick { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+  .quick button { font-family:inherit; font-size:11px; padding:6px 10px; border:1px solid var(--off);
+    background:transparent; color:var(--blue); cursor:pointer; }
+  .quick button:hover { border-color:var(--blue); }
 </style>
 </head>
 <body>
@@ -112,9 +160,49 @@
 
   <!-- Macro deck en haut : c'est l'élément d'action principal sur tablette -->
   <section class="panel deck">
-    <h2>Commandes <span id="ackHint" style="color:var(--dim);font-weight:400;letter-spacing:1px;"></span></h2>
+    <h2>
+      <span>Commandes <span id="ackHint" style="color:var(--dim);font-weight:400;letter-spacing:1px;"></span></span>
+      <button class="cfg-toggle" id="cfgToggle">⚙ Configurer</button>
+    </h2>
     <div class="macro-grid" id="macros"></div>
   </section>
+
+  <!-- Modal de configuration d'un raccourci -->
+  <div class="modal-bg" id="modalBg">
+    <div class="modal">
+      <h3 id="modalTitle">Configurer</h3>
+      <div class="sub">Définis la touche envoyée à Elite Dangerous pour cette commande.</div>
+
+      <div class="current">
+        <span class="lbl">Raccourci actuel</span>
+        <span class="val" id="modalCurrent">—</span>
+      </div>
+
+      <div class="section">
+        <div class="title">1 · Détecter une touche</div>
+        <button class="mbtn" id="detectBtn">Appuyer sur une touche…</button>
+      </div>
+
+      <div class="section">
+        <div class="title">2 · Ou saisir un code / nom</div>
+        <div class="code-row">
+          <input id="codeInput" placeholder="ex : f13, home, g, vk:135" autocomplete="off">
+          <button class="mbtn" id="codeApply" style="width:auto">OK</button>
+        </div>
+        <div class="mods">
+          <label><input type="checkbox" id="modCtrl"> Ctrl</label>
+          <label><input type="checkbox" id="modShift"> Shift</label>
+          <label><input type="checkbox" id="modAlt"> Alt</label>
+        </div>
+        <div class="quick" id="quickKeys"></div>
+      </div>
+
+      <div class="actions">
+        <button class="mbtn primary" id="saveBtn">Enregistrer</button>
+        <button class="mbtn" id="cancelBtn">Annuler</button>
+      </div>
+    </div>
+  </div>
 
   <div class="grid">
     <section class="panel">
@@ -170,7 +258,11 @@ const FLAG_DEFS = [
 
 let state = {};
 let macros = [];
+let macrosById = {};
 let ws = null;
+let configuring = false;
+let pendingSpec = null;     // KeySpec en cours d'édition dans le modal
+let editingMacroId = null;
 
 const $ = (id) => document.getElementById(id);
 function setText(id,v){ const e=$(id); if(e) e.textContent=(v==null||v==="")?"—":v; }
@@ -185,16 +277,25 @@ function buildPips(id,count){
 
 // ── Construit les boutons macro depuis la liste serveur ─────────────
 function buildMacros(){
+  macrosById = {};
   const c=$("macros"); c.innerHTML="";
   for(const m of macros){
+    macrosById[m.id]=m;
     const b=document.createElement("button");
     b.className="macro "+(m.accent||"");
     b.dataset.id=m.id;
     b.dataset.flag=m.status_flag||"";
-    b.innerHTML=`<span class="cat">${m.category||""}</span>${m.label}`;
-    b.addEventListener("click",()=>sendMacro(m.id,b));
+    const bind = m.kind==="sequence" ? "séquence" : (m.key && m.key.label ? m.key.label : "—");
+    b.innerHTML=`<span class="cat">${m.category||""}</span>${m.label}<span class="bind">${bind}</span>`;
+    b.addEventListener("click",()=>onMacroClick(m.id,b));
     c.appendChild(b);
   }
+  syncMacroStates();
+}
+
+function onMacroClick(id,btn){
+  if(configuring){ openConfig(id); return; }
+  sendMacro(id,btn);
 }
 
 function sendMacro(id,btn){
@@ -211,6 +312,97 @@ function syncMacroStates(){
     if(flag) b.classList.toggle("on",!!st[flag]);
   });
 }
+
+// ── Mode configuration ──────────────────────────────────────────────
+$("cfgToggle").addEventListener("click",()=>{
+  configuring=!configuring;
+  $("cfgToggle").classList.toggle("on",configuring);
+  document.body.classList.toggle("configuring",configuring);
+});
+
+const QUICK_KEYS = ["f13","f14","f15","f16","home","insert","delete","numpad_0"];
+
+function openConfig(id){
+  const m=macrosById[id]; if(!m) return;
+  if(m.kind==="sequence"){
+    // Les combos ne sont pas éditables touche par touche dans ce modal v1
+    $("ackHint").textContent="séquence : non éditable ici";
+    setTimeout(()=>$("ackHint").textContent="",1500);
+    return;
+  }
+  editingMacroId=id;
+  pendingSpec = m.key ? JSON.parse(JSON.stringify(m.key)) : {modifiers:[]};
+  $("modalTitle").textContent="Configurer · "+m.label;
+  $("modalCurrent").textContent=(m.key&&m.key.label)||"—";
+  $("codeInput").value="";
+  $("modCtrl").checked=(pendingSpec.modifiers||[]).includes("ctrl");
+  $("modShift").checked=(pendingSpec.modifiers||[]).includes("shift");
+  $("modAlt").checked=(pendingSpec.modifiers||[]).includes("alt");
+  // Raccourcis rapides (F13… pour touches absentes du clavier)
+  const q=$("quickKeys"); q.innerHTML="";
+  for(const k of QUICK_KEYS){
+    const btn=document.createElement("button");
+    btn.textContent=k.toUpperCase().replace("_"," ");
+    btn.addEventListener("click",()=>{ $("codeInput").value=k; });
+    q.appendChild(btn);
+  }
+  resetDetectBtn();
+  $("modalBg").classList.add("show");
+}
+
+function closeConfig(){ $("modalBg").classList.remove("show"); editingMacroId=null; pendingSpec=null; }
+$("cancelBtn").addEventListener("click",closeConfig);
+$("modalBg").addEventListener("click",(e)=>{ if(e.target===$("modalBg")) closeConfig(); });
+
+function currentModifiers(){
+  const m=[];
+  if($("modCtrl").checked) m.push("ctrl");
+  if($("modShift").checked) m.push("shift");
+  if($("modAlt").checked) m.push("alt");
+  return m;
+}
+
+function previewSpec(spec){
+  $("modalCurrent").textContent = spec && spec.label ? spec.label : "—";
+}
+
+// Détection : demande au serveur de capturer une touche sur le PC
+function resetDetectBtn(){
+  const b=$("detectBtn"); b.classList.remove("detecting");
+  b.textContent="Appuyer sur une touche…"; b.disabled=false;
+}
+$("detectBtn").addEventListener("click",()=>{
+  if(!ws||ws.readyState!==WebSocket.OPEN) return;
+  const b=$("detectBtn"); b.classList.add("detecting"); b.disabled=true;
+  b.textContent="Appuyez sur une touche du PC…";
+  ws.send(JSON.stringify({type:"capture_start"}));
+});
+
+// Saisie code/nom : "f13", "home", "g", "vk:135"
+$("codeApply").addEventListener("click",()=>{
+  const raw=$("codeInput").value.trim().toLowerCase();
+  if(!raw) return;
+  const spec={modifiers:currentModifiers()};
+  if(raw.startsWith("vk:")){
+    const vk=parseInt(raw.slice(3),10);
+    if(!isNaN(vk)){ spec.vk=vk; }
+  } else if(/^[a-z]$/.test(raw)){
+    spec.char=raw;
+  } else {
+    spec.name=raw;  // f13, home, enter… (le serveur résout vk si besoin)
+  }
+  // Libellé provisoire (le serveur renverra le définitif après set)
+  spec.label = (spec.modifiers.length?spec.modifiers.map(m=>m[0].toUpperCase()+m.slice(1)).join("+")+"+":"")
+             + (spec.name?spec.name.toUpperCase().replace("_"," "):spec.char?spec.char.toUpperCase():spec.vk!=null?("VK "+spec.vk):"—");
+  pendingSpec=spec; previewSpec(spec);
+});
+
+$("saveBtn").addEventListener("click",()=>{
+  if(!editingMacroId||!pendingSpec){ closeConfig(); return; }
+  pendingSpec.modifiers=currentModifiers();
+  ws.send(JSON.stringify({type:"set_keybind",id:editingMacroId,keyspec:pendingSpec}));
+  closeConfig();
+});
 
 function render(){
   const sh=state.ship||{}, st=state.status||{}, nav=state.navigation||{};
@@ -266,10 +458,35 @@ function connect(){
     const msg=JSON.parse(ev.data);
     if(msg.type==="snapshot"){ state=msg.state; render(); }
     else if(msg.type==="patch"){ applyPatch(msg.changes); render(); }
-    else if(msg.type==="macros"){ macros=msg.macros; buildMacros(); syncMacroStates(); }
+    else if(msg.type==="macros"){ macros=msg.macros; buildMacros(); }
     else if(msg.type==="macro_ack"){
       $("ackHint").textContent=msg.ok?`✓ ${msg.id}`:`✗ ${msg.id}`;
       setTimeout(()=>$("ackHint").textContent="",1200);
+    }
+    else if(msg.type==="capture_result"){
+      resetDetectBtn();
+      if(msg.keyspec){
+        pendingSpec=msg.keyspec;
+        // Synchronise les cases modificateurs avec la touche détectée
+        const mods=msg.keyspec.modifiers||[];
+        $("modCtrl").checked=mods.includes("ctrl");
+        $("modShift").checked=mods.includes("shift");
+        $("modAlt").checked=mods.includes("alt");
+        previewSpec(msg.keyspec);
+      } else {
+        $("modalCurrent").textContent=msg.error||"aucune touche";
+      }
+    }
+    else if(msg.type==="keybind_updated"){
+      if(msg.ok && msg.keyspec){
+        const m=macrosById[msg.id];
+        if(m){ m.key=msg.keyspec; }
+        // Met à jour la pastille du bouton
+        const btn=document.querySelector(`.macro[data-id="${msg.id}"] .bind`);
+        if(btn) btn.textContent=msg.keyspec.label||"—";
+        $("ackHint").textContent=`✓ ${msg.id} → ${msg.keyspec.label}`;
+        setTimeout(()=>$("ackHint").textContent="",1800);
+      }
     }
   };
   ws.onclose=()=>{ setConn(false); setTimeout(connect,1500); };
